@@ -667,9 +667,10 @@ public class UserDashboard extends JFrame {
         orderPanel.removeAll();
         try (Connection con = DBConnection.getConnection()) {
             // Fetch items grouped by order or just flat detailed items
-            String sql = "SELECT o.id as oid, o.status, o.order_date, p.name, p.image_path, oi.price, oi.quantity " +
+            String sql = "SELECT o.id as oid, o.status, o.order_date, p.name, p.image_path, oi.price, oi.quantity, u.address " +
                     "FROM orders o JOIN order_items oi ON o.id = oi.order_id " +
                     "JOIN products p ON oi.product_id = p.id " +
+                    "JOIN users u ON o.user_id = u.id " +
                     "WHERE o.user_id = ? ORDER BY o.order_date DESC";
 
             PreparedStatement ps = con.prepareStatement(sql);
@@ -684,7 +685,8 @@ public class UserDashboard extends JFrame {
                         rs.getDouble("price"),
                         rs.getInt("quantity"),
                         rs.getString("status"),
-                        rs.getTimestamp("order_date")));
+                        rs.getTimestamp("order_date"),
+                        rs.getString("address")));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -695,13 +697,13 @@ public class UserDashboard extends JFrame {
         orderPanel.repaint();
     }
 
-    JPanel orderDetailCard(int oid, String name, String img, double price, int qty, String status, Timestamp date) {
+    JPanel orderDetailCard(int oid, String name, String img, double price, int qty, String status, Timestamp date, String address) {
         JPanel card = new JPanel(new BorderLayout(20, 0));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(230, 230, 230)),
                 BorderFactory.createEmptyBorder(20, 25, 20, 25)));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
         JLabel image = new JLabel("", SwingConstants.CENTER);
         try {
@@ -712,14 +714,14 @@ public class UserDashboard extends JFrame {
         }
         card.add(image, BorderLayout.WEST);
 
-        JPanel info = new JPanel(new GridLayout(1, 3, 20, 0));
+        JPanel info = new JPanel(new GridLayout(1, 4, 15, 0)); // Changed to 4 columns
         info.setBackground(Color.WHITE);
         info.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
 
         // Product & Order ID
         JPanel namePanel = new JPanel(new GridLayout(2, 1));
         namePanel.setBackground(Color.WHITE);
-        JLabel lblName = new JLabel(name);
+        JLabel lblName = new JLabel("<html><p style='width:120px;'>" + name + "</p></html>");
         lblName.setFont(Theme.HEADER);
         JLabel lblOid = new JLabel("Order #" + oid + " | Qty: " + qty);
         lblOid.setFont(Theme.SMALL);
@@ -739,6 +741,15 @@ public class UserDashboard extends JFrame {
         pricePanel.add(lblPrice);
         pricePanel.add(lblDate);
 
+        // Address Field
+        JPanel addressPanel = new JPanel(new BorderLayout());
+        addressPanel.setBackground(Color.WHITE);
+        String displayAddress = (address == null || address.trim().isEmpty() || address.equals("-")) ? "No Shipping Address Provided" : address;
+        JLabel lblAddress = new JLabel("<html><div style='width:120px; color:#555555;'><b>Ship To:</b><br>" + displayAddress + "</div></html>");
+        lblAddress.setFont(Theme.SMALL);
+        lblAddress.setVerticalAlignment(SwingConstants.TOP);
+        addressPanel.add(lblAddress, BorderLayout.CENTER);
+
         // Status
         JPanel statusPanel = new JPanel(new BorderLayout());
         statusPanel.setBackground(Color.WHITE);
@@ -749,6 +760,7 @@ public class UserDashboard extends JFrame {
 
         info.add(namePanel);
         info.add(pricePanel);
+        info.add(addressPanel);
         info.add(statusPanel);
 
         card.add(info, BorderLayout.CENTER);
