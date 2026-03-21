@@ -667,7 +667,8 @@ public class UserDashboard extends JFrame {
         orderPanel.removeAll();
         try (Connection con = DBConnection.getConnection()) {
             // Fetch items grouped by order or just flat detailed items
-            String sql = "SELECT o.id as oid, o.status, o.order_date, p.name, p.image_path, oi.price, oi.quantity, u.address " +
+            String sql = "SELECT o.id as oid, o.status, o.order_date, p.name, p.image_path, oi.price, oi.quantity, u.address "
+                    +
                     "FROM orders o JOIN order_items oi ON o.id = oi.order_id " +
                     "JOIN products p ON oi.product_id = p.id " +
                     "JOIN users u ON o.user_id = u.id " +
@@ -697,7 +698,8 @@ public class UserDashboard extends JFrame {
         orderPanel.repaint();
     }
 
-    JPanel orderDetailCard(int oid, String name, String img, double price, int qty, String status, Timestamp date, String address) {
+    JPanel orderDetailCard(int oid, String name, String img, double price, int qty, String status, Timestamp date,
+            String address) {
         JPanel card = new JPanel(new BorderLayout(20, 0));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
@@ -744,8 +746,11 @@ public class UserDashboard extends JFrame {
         // Address Field
         JPanel addressPanel = new JPanel(new BorderLayout());
         addressPanel.setBackground(Color.WHITE);
-        String displayAddress = (address == null || address.trim().isEmpty() || address.equals("-")) ? "No Shipping Address Provided" : address;
-        JLabel lblAddress = new JLabel("<html><div style='width:120px; color:#555555;'><b>Ship To:</b><br>" + displayAddress + "</div></html>");
+        String displayAddress = (address == null || address.trim().isEmpty() || address.equals("-"))
+                ? "No Shipping Address Provided"
+                : address;
+        JLabel lblAddress = new JLabel("<html><div style='width:120px; color:#555555;'><b>Ship To:</b><br>"
+                + displayAddress + "</div></html>");
         lblAddress.setFont(Theme.SMALL);
         lblAddress.setVerticalAlignment(SwingConstants.TOP);
         addressPanel.add(lblAddress, BorderLayout.CENTER);
