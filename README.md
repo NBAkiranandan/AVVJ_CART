@@ -70,5 +70,5 @@ This project was developed to understand:
 
 ## 👨‍💻 Author
 
-Akira
+NB Akiranandan
 B.Tech Computer Science Engineering
