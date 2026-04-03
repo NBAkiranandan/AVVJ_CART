@@ -45,6 +45,7 @@ description TEXT,
 price DOUBLE,
 stock INT,
 image_path VARCHAR(255),
+category VARCHAR(100),
 supplier_id INT,
 FOREIGN KEY(supplier_id) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -107,7 +108,7 @@ INSERT INTO wallet VALUES
 ------------------------------------------------
 -- PRODUCTS WITH IMAGES
 ------------------------------------------------
-INSERT INTO products(name,description,price,stock,image_path,supplier_id)
+INSERT INTO products(name,description,price,stock,image_path,category,supplier_id)
 VALUES
 
 ('iPhone 15',
@@ -115,6 +116,7 @@ VALUES
 79999,
 50,
 '/icons/phone.png',
+'Electronics',
 2),
 
 ('Samsung Galaxy S24 Ultra',
@@ -122,6 +124,7 @@ VALUES
 124999,
 40,
 '/icons/phone.png',
+'Electronics',
 2),
 
 ('MacBook Air M3',
@@ -129,6 +132,7 @@ VALUES
 114900,
 20,
 '/icons/laptop.png',
+'Electronics',
 2),
 
 ('Gaming Laptop',
@@ -136,6 +140,7 @@ VALUES
 95000,
 15,
 '/icons/laptop.png',
+'Electronics',
 2),
 
 ('Nike Running Shoes',
@@ -143,6 +148,7 @@ VALUES
 4999,
 100,
 '/icons/shoes.png',
+'Footwear',
 2),
 
 ('Adidas Sneakers',
@@ -150,4 +156,5 @@ VALUES
 3999,
 120,
 '/icons/shoes.png',
+'Footwear',
 2);

@@ -6,11 +6,13 @@ import java.sql.*;
 
 public class ForgotPassword extends JFrame {
 
-    JTextField txtUser, txtAnswer;
+    JTextField txtUser, txtOTP;
     JPasswordField txtPass, txtCPass;
-    JLabel lblQuestion;
-    JButton btnCheck, btnReset;
+    JLabel lblEmailStatus;
+    JButton btnCheck, btnSendOTP, btnReset;
     JPanel root, card;
+    String userEmail = "";
+    String generatedOTP = "";
 
     public ForgotPassword() {
         setTitle("AVVJ cart - Reset Password");
@@ -52,14 +54,22 @@ public class ForgotPassword extends JFrame {
         btnCheck.addActionListener(e -> verifyUser());
         card.add(btnCheck);
 
-        lblQuestion = new JLabel("Security Question will appear here");
-        lblQuestion.setBounds(x, 230, w, 20);
-        lblQuestion.setFont(Theme.SMALL);
-        lblQuestion.setForeground(Theme.GRAY);
-        card.add(lblQuestion);
+        lblEmailStatus = new JLabel("Email will appear here");
+        lblEmailStatus.setBounds(x, 230, w, 20);
+        lblEmailStatus.setFont(Theme.SMALL);
+        lblEmailStatus.setForeground(Theme.GRAY);
+        card.add(lblEmailStatus);
 
-        txtAnswer = field(card, x, 255, w, h);
-        txtAnswer.setEnabled(false);
+        btnSendOTP = new JButton("Send OTP");
+        btnSendOTP.setBounds(x, 255, 100, h);
+        btnSendOTP.setBackground(Theme.BLUE);
+        btnSendOTP.setForeground(Color.WHITE);
+        btnSendOTP.setEnabled(false);
+        btnSendOTP.addActionListener(e -> sendOTP());
+        card.add(btnSendOTP);
+
+        txtOTP = field(card, x + 110, 255, w - 110, h);
+        txtOTP.setEnabled(false);
 
         addLabel(card, "New Password", x, 310);
         txtPass = password(card, x, 335, w, h);
@@ -87,16 +97,16 @@ public class ForgotPassword extends JFrame {
             return;
 
         try (Connection con = DBConnection.getConnection()) {
-            PreparedStatement ps = con.prepareStatement("SELECT security_question FROM users WHERE username=?");
+            PreparedStatement ps = con.prepareStatement("SELECT email FROM users WHERE username=?");
             ps.setString(1, user);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                lblQuestion.setText(rs.getString(1));
-                txtAnswer.setEnabled(true);
-                txtPass.setEnabled(true);
-                txtCPass.setEnabled(true);
-                btnReset.setEnabled(true);
+                userEmail = rs.getString("email");
+                String maskedEmail = userEmail.replaceAll("(^[^@]{3}|(?!^)\\G)[^@]", "$1*");
+                lblEmailStatus.setText("Registered Email: " + maskedEmail);
+                
+                btnSendOTP.setEnabled(true);
                 btnCheck.setEnabled(false);
                 txtUser.setEditable(false);
             } else {
@@ -107,30 +117,51 @@ public class ForgotPassword extends JFrame {
         }
     }
 
+    void sendOTP() {
+        OTPManager.generateOTP();
+        JOptionPane.showMessageDialog(this, "Sending OTP to your registered email... Please wait.");
+        boolean sent = EmailUtility.sendOTP(userEmail, OTPManager.getOTP());
+        
+        if (!sent) {
+            JOptionPane.showMessageDialog(this, "Failed to send OTP!");
+            return;
+        }
+        
+        JOptionPane.showMessageDialog(this, "OTP sent!");
+        
+        txtOTP.setEnabled(true);
+        txtPass.setEnabled(true);
+        txtCPass.setEnabled(true);
+        btnReset.setEnabled(true);
+    }
+
     void resetPassword() {
         String user = txtUser.getText().trim();
-        String answer = txtAnswer.getText().trim();
+        String enteredOTP = txtOTP.getText().trim();
         String pass = String.valueOf(txtPass.getPassword());
         String cpass = String.valueOf(txtCPass.getPassword());
 
-        if (answer.isEmpty() || pass.isEmpty() || !pass.equals(cpass)) {
-            JOptionPane.showMessageDialog(this, "Please check all fields");
+        if (enteredOTP.isEmpty() || pass.isEmpty() || !pass.equals(cpass)) {
+            JOptionPane.showMessageDialog(this, "Please check all fields and ensure passwords match.");
+            return;
+        }
+        
+        if (!OTPManager.verifyOTP(enteredOTP)) {
+            JOptionPane.showMessageDialog(this, "Invalid or Expired OTP!");
             return;
         }
 
         try (Connection con = DBConnection.getConnection()) {
-            PreparedStatement ps = con
-                    .prepareStatement("UPDATE users SET password=? WHERE username=? AND security_answer=?");
+            PreparedStatement ps = con.prepareStatement("UPDATE users SET password=? WHERE username=?");
             ps.setString(1, pass);
             ps.setString(2, user);
-            ps.setString(3, answer);
 
             if (ps.executeUpdate() > 0) {
                 JOptionPane.showMessageDialog(this, "Password Reset Successful!");
                 new Login().setVisible(true);
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Incorrect Security Answer!");
+                JOptionPane.showMessageDialog(this, "Reset Failed!");
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -325,6 +325,12 @@ public class SupplierDashboard extends JFrame {
         JLabel lblStock = new JLabel("Stock: " + stock);
         lblStock.setFont(Theme.SMALL);
 
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        btns.setBackground(Color.WHITE);
+
+        JButton edit = createBtn("Edit", Theme.BLUE);
+        edit.addActionListener(e -> editProduct(id, name, price, stock, img, desc, cat));
+
         JButton delete = createBtn("Delete", Color.RED);
         delete.addActionListener(e -> {
             try (Connection con = DBConnection.getConnection()) {
@@ -336,12 +342,16 @@ public class SupplierDashboard extends JFrame {
             }
         });
 
+        btns.add(edit);
+        btns.add(Box.createHorizontalStrut(10));
+        btns.add(delete);
+
         info.add(lblName);
         info.add(lblCat);
         info.add(lblPrice);
         info.add(lblStock);
         info.add(Box.createVerticalStrut(10));
-        info.add(delete);
+        info.add(btns);
 
         card.add(info, BorderLayout.CENTER);
         return card;
@@ -397,7 +407,7 @@ public class SupplierDashboard extends JFrame {
         JTextArea txtDesc = new JTextArea(3, 20);
         txtDesc.setLineWrap(true);
         txtDesc.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        JComboBox<String> catBox = new JComboBox<>(new String[] { "Electronics", "Clothing", "Shoes" });
+        JComboBox<String> catBox = new JComboBox<>(new String[] { "Electronics", "Fashion", "Footwear" });
 
         JLabel lblImgPath = new JLabel("No image selected");
         final String[] selectedPath = { "/icons/products.png" };
@@ -429,6 +439,115 @@ public class SupplierDashboard extends JFrame {
                 loadProducts();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Product Added!");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage());
+            }
+        });
+
+        int row = 0;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(txtName, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Price:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(txtPrice, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Stock:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(txtStock, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Category:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(catBox, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Description:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(new JScrollPane(txtDesc), gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        dialog.add(new JLabel("Image:"), gbc);
+        gbc.gridx = 1;
+        dialog.add(btnPick, gbc);
+
+        row++;
+        gbc.gridx = 1;
+        gbc.gridy = row;
+        dialog.add(lblImgPath, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        dialog.add(btnSave, gbc);
+
+        dialog.setVisible(true);
+    }
+
+    void editProduct(int id, String name, double price, int stock, String img, String desc, String cat) {
+        JDialog dialog = new JDialog(this, "Edit Product", true);
+        dialog.setSize(450, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextField txtName = new JTextField(name, 20);
+        JTextField txtPrice = new JTextField(String.valueOf(price), 20);
+        JTextField txtStock = new JTextField(String.valueOf(stock), 20);
+        JTextArea txtDesc = new JTextArea(desc, 3, 20);
+        txtDesc.setLineWrap(true);
+        txtDesc.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        JComboBox<String> catBox = new JComboBox<>(new String[] { "Electronics", "Fashion", "Footwear" });
+        catBox.setSelectedItem(cat);
+
+        JLabel lblImgPath = new JLabel(img.replace("/icons/", ""));
+        final String[] selectedPath = { img };
+
+        JButton btnPick = new JButton("Pick Image");
+        btnPick.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser("src/icons");
+            int res = chooser.showOpenDialog(dialog);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                String path = chooser.getSelectedFile().getName();
+                selectedPath[0] = "/icons/" + path;
+                lblImgPath.setText(path);
+            }
+        });
+
+        JButton btnSave = createBtn("Update Product", Theme.ORANGE);
+        btnSave.addActionListener(e -> {
+            try (Connection con = DBConnection.getConnection()) {
+                PreparedStatement pst = con.prepareStatement(
+                        "UPDATE products SET name=?, price=?, stock=?, image_path=?, description=?, category=? WHERE id=?");
+                pst.setString(1, txtName.getText());
+                pst.setDouble(2, Double.parseDouble(txtPrice.getText()));
+                pst.setInt(3, Integer.parseInt(txtStock.getText()));
+                pst.setString(4, selectedPath[0]);
+                pst.setString(5, txtDesc.getText());
+                pst.setString(6, catBox.getSelectedItem().toString());
+                pst.setInt(7, id);
+                pst.executeUpdate();
+                loadProducts();
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Product Updated!");
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage());
             }

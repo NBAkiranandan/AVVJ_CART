@@ -4,8 +4,7 @@ import java.sql.*;
 
 public class DBConnection {
 
-    private static final String URL =
-        "jdbc:mysql://localhost:3306/avvj_cart";
+    private static final String URL = "jdbc:mysql://localhost:3306/avvj_cart";
     private static final String USER = "root";
     private static final String PASS = "Akira@8055";
 

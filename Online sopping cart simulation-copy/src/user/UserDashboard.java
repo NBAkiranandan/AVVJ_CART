@@ -237,7 +237,7 @@ public class UserDashboard extends JFrame {
         searchField.setFont(Theme.NORMAL);
         JButton searchBtn = createBtn("Search", Theme.BLUE);
 
-        categoryBox = new JComboBox<>(new String[] { "All", "Electronics", "Clothing", "Shoes" });
+        categoryBox = new JComboBox<>(new String[] { "All", "Electronics", "Fashion", "Footwear" });
         categoryBox.setFont(Theme.NORMAL);
 
         searchBtn.addActionListener(e -> loadProducts());

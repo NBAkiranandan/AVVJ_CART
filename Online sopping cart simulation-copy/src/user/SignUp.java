@@ -6,12 +6,14 @@ import java.sql.*;
 
 public class SignUp extends JFrame {
 
-    JTextField txtUser, txtEmail, txtMobile, txtAge, txtAddress, txtAnswer;
+    JTextField txtUser, txtEmail, txtMobile, txtAge, txtAddress, txtOTP;
     JPasswordField txtPass, txtCPass;
-    JComboBox<String> securityBox, roleBox;
+    JComboBox<String> roleBox;
 
     JToggleButton eyeBtn, ceyeBtn;
     ImageIcon eyeOpen, eyeClosed;
+    JButton btnSendOTP;
+    String generatedOTP = "";
 
     public SignUp() {
 
@@ -75,20 +77,20 @@ public class SignUp extends JFrame {
         roleBox.setFont(Theme.NORMAL);
         card.add(roleBox);
 
-        // Security Question
+        // OTP Verification
         y += gap;
-        addLabel(card, "Security Question", x, y);
-        securityBox = new JComboBox<>(new String[] {
-                "Your City?", "First Pet?", "Favorite Color?", "School Name?"
-        });
-        securityBox.setBounds(x, y + 20, w, h);
-        securityBox.setFont(Theme.NORMAL);
-        card.add(securityBox);
+        btnSendOTP = new JButton("Send OTP");
+        btnSendOTP.setBounds(x, y + 20, 100, h);
+        btnSendOTP.setBackground(Theme.BLUE);
+        btnSendOTP.setForeground(Color.WHITE);
+        btnSendOTP.setFocusPainted(false);
+        btnSendOTP.addActionListener(e -> sendOTP());
+        card.add(btnSendOTP);
 
-        // Answer
-        y += gap;
-        addLabel(card, "Answer", x, y);
-        txtAnswer = field(card, x, y + 20, w, h);
+        txtOTP = field(card, x + 110, y + 20, w - 110, h);
+        addLabel(card, "Enter Email OTP", x + 110, y);
+        
+        y += gap; // Maintain the same visual gap logic for the dropped field
 
         // Password
         y += gap;
@@ -150,17 +152,36 @@ public class SignUp extends JFrame {
         }
     }
 
+    void sendOTP() {
+        String email = txtEmail.getText().trim();
+    
+        if (email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter email first");
+            return;
+        }
+    
+        OTPManager.generateOTP();
+    
+        boolean sent = EmailUtility.sendOTP(email, OTPManager.getOTP());
+    
+        if (sent) {
+            JOptionPane.showMessageDialog(this, "OTP sent!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to send OTP");
+        }
+    }
+
     void submit() {
         String username = txtUser.getText().trim();
         String email = txtEmail.getText().trim();
         String mobile = txtMobile.getText().trim();
         String ageText = txtAge.getText().trim();
-        String answer = txtAnswer.getText().trim();
+        String enteredOTP = txtOTP.getText().trim();
         String role = roleBox.getSelectedItem().toString().toLowerCase();
         String pass = new String(txtPass.getPassword());
         String cpass = new String(txtCPass.getPassword());
 
-        if (username.isEmpty() || email.isEmpty() || mobile.isEmpty() || ageText.isEmpty() || answer.isEmpty()
+        if (username.isEmpty() || email.isEmpty() || mobile.isEmpty() || ageText.isEmpty() || enteredOTP.isEmpty()
                 || pass.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill all fields.");
             return;
@@ -168,6 +189,11 @@ public class SignUp extends JFrame {
 
         if (!pass.equals(cpass)) {
             JOptionPane.showMessageDialog(this, "Passwords do not match.");
+            return;
+        }
+        
+        if (!OTPManager.verifyOTP(enteredOTP)) {
+            JOptionPane.showMessageDialog(this, "Invalid or Expired OTP!");
             return;
         }
 
@@ -182,8 +208,8 @@ public class SignUp extends JFrame {
                 ps.setString(4, mobile);
                 ps.setInt(5, age);
                 ps.setString(6, ""); // Address empty by default
-                ps.setString(7, securityBox.getSelectedItem().toString());
-                ps.setString(8, answer);
+                ps.setString(7, "Email OTP Verification"); // Security Box Removed
+                ps.setString(8, "Verified"); // Security Answer Removed
                 ps.setString(9, role);
                 ps.setInt(10, role.equals("supplier") ? 0 : 1);
 
