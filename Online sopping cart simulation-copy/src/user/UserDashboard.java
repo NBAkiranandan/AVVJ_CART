@@ -81,7 +81,7 @@ public class UserDashboard extends JFrame {
         s.add(menuItem("Shop Products", "/icons/products.png"));
         s.add(menuItem("My Cart", "/icons/cart.png"));
         s.add(menuItem("My Orders", "/icons/orders.png"));
-        s.add(menuItem("Address", "/icons/profile.png"));
+        s.add(menuItem("My Profile", "/icons/profile.png"));
         s.add(menuItem("Wallet", "/icons/wallet.png"));
 
         s.add(Box.createVerticalGlue());
@@ -130,8 +130,8 @@ public class UserDashboard extends JFrame {
                     case "My Orders":
                         loadOrders();
                         break;
-                    case "Address":
-                        editAddress();
+                    case "My Profile":
+                        editProfile();
                         break;
                     case "Wallet":
                         rechargeWallet();
@@ -314,8 +314,17 @@ public class UserDashboard extends JFrame {
         JLabel image = new JLabel("", SwingConstants.CENTER);
         image.setPreferredSize(new Dimension(0, 180));
         try {
-            image.setIcon(new ImageIcon(new ImageIcon(getClass().getResource(img))
-                    .getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH)));
+            java.net.URL imgUrl = getClass().getResource(img);
+            if(imgUrl != null) {
+                image.setIcon(new ImageIcon(new ImageIcon(imgUrl).getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH)));
+            } else {
+                java.io.File f = new java.io.File("src" + img);
+                if(f.exists()){
+                    image.setIcon(new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(140, 140, Image.SCALE_SMOOTH)));
+                } else {
+                    image.setText("No Image");
+                }
+            }
         } catch (Exception e) {
             image.setText("No Image");
         }
@@ -422,7 +431,6 @@ public class UserDashboard extends JFrame {
 
     void loadCart() {
         cartPanel.removeAll();
-        selectedCartIds.clear(); // Clear selections on load
         try (Connection con = DBConnection.getConnection()) {
             PreparedStatement ps = con.prepareStatement(
                     "SELECT c.id,p.name,c.quantity,c.price,p.image_path FROM cart c JOIN products p ON c.product_id=p.id WHERE c.user_id=?");
@@ -455,6 +463,7 @@ public class UserDashboard extends JFrame {
         // Selection Checkbox
         JCheckBox select = new JCheckBox();
         select.setBackground(Color.WHITE);
+        select.setSelected(selectedCartIds.contains(id));
         select.addActionListener(e -> {
             if (select.isSelected())
                 selectedCartIds.add(id);
@@ -469,8 +478,17 @@ public class UserDashboard extends JFrame {
 
         JLabel image = new JLabel("", SwingConstants.CENTER);
         try {
-            image.setIcon(new ImageIcon(new ImageIcon(getClass().getResource(img))
-                    .getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+            java.net.URL imgUrl = getClass().getResource(img);
+            if(imgUrl != null) {
+                image.setIcon(new ImageIcon(new ImageIcon(imgUrl).getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+            } else {
+                java.io.File f = new java.io.File("src" + img);
+                if(f.exists()){
+                    image.setIcon(new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+                } else {
+                    image.setText("No Image");
+                }
+            }
         } catch (Exception e) {
             image.setText("No Image");
         }
@@ -558,6 +576,7 @@ public class UserDashboard extends JFrame {
             PreparedStatement ps = con.prepareStatement("DELETE FROM cart WHERE id=?");
             ps.setInt(1, id);
             ps.executeUpdate();
+            selectedCartIds.remove((Integer) id);
             loadCart();
         } catch (Exception e) {
             e.printStackTrace();
@@ -637,6 +656,7 @@ public class UserDashboard extends JFrame {
 
             // Clear Selected items from Cart
             con.createStatement().executeUpdate("DELETE FROM cart WHERE id IN " + placeholders);
+            selectedCartIds.clear();
 
             con.commit();
             JOptionPane.showMessageDialog(this, "Order Placed Successfully!");
@@ -709,8 +729,17 @@ public class UserDashboard extends JFrame {
 
         JLabel image = new JLabel("", SwingConstants.CENTER);
         try {
-            image.setIcon(new ImageIcon(new ImageIcon(getClass().getResource(img))
-                    .getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH)));
+            java.net.URL imgUrl = getClass().getResource(img);
+            if(imgUrl != null) {
+                image.setIcon(new ImageIcon(new ImageIcon(imgUrl).getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH)));
+            } else {
+                java.io.File f = new java.io.File("src" + img);
+                if(f.exists()){
+                    image.setIcon(new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH)));
+                } else {
+                    image.setText("No Image");
+                }
+            }
         } catch (Exception e) {
             image.setText("No Image");
         }
@@ -772,21 +801,99 @@ public class UserDashboard extends JFrame {
         return card;
     }
 
-    void editAddress() {
-        JTextArea area = new JTextArea(lblAddress.getText(), 5, 20);
-        int res = JOptionPane.showConfirmDialog(this, new JScrollPane(area), "Edit Address",
-                JOptionPane.OK_CANCEL_OPTION);
-        if (res == JOptionPane.OK_OPTION) {
-            try (Connection con = DBConnection.getConnection()) {
-                PreparedStatement ps = con.prepareStatement("UPDATE users SET address=? WHERE id=?");
-                ps.setString(1, area.getText());
-                ps.setInt(2, userId);
-                ps.executeUpdate();
-                loadStats();
-            } catch (Exception e) {
-                e.printStackTrace();
+    void editProfile() {
+        JDialog dialog = new JDialog(this, "Edit My Profile", true);
+        dialog.setSize(450, 450);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextField txtName = new JTextField(20);
+        JTextField txtEmail = new JTextField(20);
+        JTextField txtMobile = new JTextField(20);
+        JTextField txtAge = new JTextField(20);
+        JTextArea txtAddress = new JTextArea(3, 20);
+        txtAddress.setLineWrap(true);
+        txtAddress.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+
+        try (Connection con = DBConnection.getConnection()) {
+            PreparedStatement ps = con.prepareStatement("SELECT * FROM users WHERE id=?");
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                txtName.setText(rs.getString("username"));
+                txtEmail.setText(rs.getString("email"));
+                txtMobile.setText(rs.getString("mobile"));
+                txtAge.setText(String.valueOf(rs.getInt("age")));
+                txtAddress.setText(rs.getString("address"));
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        JButton btnSave = createBtn("Save Details", Theme.ORANGE);
+        btnSave.addActionListener(e -> {
+            try (Connection con = DBConnection.getConnection()) {
+                PreparedStatement ps = con.prepareStatement("UPDATE users SET username=?, email=?, mobile=?, age=?, address=? WHERE id=?");
+                ps.setString(1, txtName.getText().trim());
+                ps.setString(2, txtEmail.getText().trim());
+                ps.setString(3, txtMobile.getText().trim());
+                try {
+                    ps.setInt(4, Integer.parseInt(txtAge.getText().trim()));
+                } catch(Exception ex) {
+                    ps.setNull(4, java.sql.Types.INTEGER);
+                }
+                ps.setString(5, txtAddress.getText().trim());
+                ps.setInt(6, userId);
+                ps.executeUpdate();
+                
+                // Update header username and dash components
+                this.username = txtName.getText().trim();
+                Component[] comps = ((JPanel)getContentPane().getComponent(0)).getComponents();
+                for(Component c: comps) {
+                    if (c instanceof JPanel && ((JPanel)c).getPreferredSize().height == 70) {
+                        JLabel t = (JLabel) ((JPanel)c).getComponent(0);
+                        t.setText("Welcome back, " + this.username);
+                    }
+                }
+                lblAddress.setText("<html><div style='width:120px;'>" + txtAddress.getText().trim() + "</div></html>");
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Profile Updated Successfully!");
+                loadStats();
+            } catch (SQLIntegrityConstraintViolationException ex) {
+                JOptionPane.showMessageDialog(dialog, "Username or Email already exists!");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage());
+            }
+        });
+
+        int row = 0;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1; dialog.add(txtName, gbc);
+
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Email:"), gbc);
+        gbc.gridx = 1; dialog.add(txtEmail, gbc);
+
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Mobile:"), gbc);
+        gbc.gridx = 1; dialog.add(txtMobile, gbc);
+
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Age:"), gbc);
+        gbc.gridx = 1; dialog.add(txtAge, gbc);
+
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Address:"), gbc);
+        gbc.gridx = 1; dialog.add(new JScrollPane(txtAddress), gbc);
+
+        row++;
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2; dialog.add(btnSave, gbc);
+
+        dialog.setVisible(true);
     }
 
     void rechargeWallet() {

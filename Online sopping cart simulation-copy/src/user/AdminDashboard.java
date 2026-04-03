@@ -16,7 +16,7 @@ public class AdminDashboard extends JFrame {
     DefaultTableModel model;
 
     JPanel btnPanel;
-    JButton btnDelete, btnBack, btnAccept;
+    JButton btnDelete, btnBack, btnAccept, btnEdit;
 
     JTextField searchField;
 
@@ -227,10 +227,12 @@ public class AdminDashboard extends JFrame {
         btnDelete = createBtn("Delete", Color.RED);
         btnBack = createBtn("Back", Theme.BLUE);
         btnAccept = createBtn("Accept Supplier", new Color(0, 150, 0));
+        btnEdit = createBtn("Edit", Theme.ORANGE);
 
         btnDelete.addActionListener(e -> deleteRow());
         btnBack.addActionListener(e -> contentLayout.show(dynamicContent, "dashboard"));
         btnAccept.addActionListener(e -> approveSupplier());
+        btnEdit.addActionListener(e -> editUser());
 
         btnPanel.add(btnDelete);
         btnPanel.add(btnBack);
@@ -300,6 +302,7 @@ public class AdminDashboard extends JFrame {
         currentPage = "users";
 
         btnPanel.removeAll();
+        btnPanel.add(btnEdit);
         btnPanel.add(btnDelete);
         btnPanel.add(btnBack);
 
@@ -342,8 +345,17 @@ public class AdminDashboard extends JFrame {
         JLabel image = new JLabel("", SwingConstants.CENTER);
         image.setPreferredSize(new Dimension(0, 120));
         try {
-            image.setIcon(new ImageIcon(new ImageIcon(getClass().getResource(img))
-                    .getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+            java.net.URL imgUrl = getClass().getResource(img);
+            if (imgUrl != null) {
+                image.setIcon(new ImageIcon(new ImageIcon(imgUrl).getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+            } else {
+                java.io.File f = new java.io.File("src" + img);
+                if(f.exists()){
+                    image.setIcon(new ImageIcon(new ImageIcon(f.getAbsolutePath()).getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH)));
+                } else {
+                    image.setText("No Image");
+                }
+            }
         } catch (Exception e) {
             image.setText("No Image");
         }
@@ -403,6 +415,7 @@ public class AdminDashboard extends JFrame {
         currentPage = "users"; // We target the users table for deletions/updates
 
         btnPanel.removeAll();
+        btnPanel.add(btnEdit);
         btnPanel.add(btnAccept);
         btnPanel.add(btnDelete);
         btnPanel.add(btnBack);
@@ -513,6 +526,127 @@ public class AdminDashboard extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /* EDIT USER / SUPPLIER */
+
+    void editUser() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Select a user/supplier first");
+            return;
+        }
+
+        int id = (int) table.getValueAt(row, 0);
+        String currentRole = "user"; // To know how to reload the table
+
+        JDialog dialog = new JDialog(this, "Edit User Details", true);
+        dialog.setSize(450, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextField txtName = new JTextField(20);
+        JTextField txtEmail = new JTextField(20);
+        JTextField txtMobile = new JTextField(20);
+        JTextField txtAge = new JTextField(20);
+        JTextArea txtAddress = new JTextArea(3, 20);
+        txtAddress.setLineWrap(true);
+        txtAddress.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        JComboBox<String> roleBox = new JComboBox<>(new String[]{"user", "supplier", "admin"});
+        JCheckBox chkApproved = new JCheckBox("Approved");
+        chkApproved.setBackground(Theme.BG);
+
+        try (Connection con = DBConnection.getConnection()) {
+            PreparedStatement ps = con.prepareStatement("SELECT * FROM users WHERE id=?");
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                txtName.setText(rs.getString("username"));
+                txtEmail.setText(rs.getString("email"));
+                txtMobile.setText(rs.getString("mobile"));
+                txtAge.setText(String.valueOf(rs.getInt("age")));
+                txtAddress.setText(rs.getString("address"));
+                currentRole = rs.getString("role");
+                roleBox.setSelectedItem(currentRole);
+                chkApproved.setSelected(rs.getInt("approved") == 1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        final String finalCurrentRole = currentRole;
+
+        JButton btnSave = createBtn("Save Details", Theme.ORANGE);
+        btnSave.addActionListener(e -> {
+            try (Connection con = DBConnection.getConnection()) {
+                PreparedStatement ps = con.prepareStatement("UPDATE users SET username=?, email=?, mobile=?, age=?, address=?, role=?, approved=? WHERE id=?");
+                ps.setString(1, txtName.getText().trim());
+                ps.setString(2, txtEmail.getText().trim());
+                ps.setString(3, txtMobile.getText().trim());
+                try {
+                    ps.setInt(4, Integer.parseInt(txtAge.getText().trim()));
+                } catch(Exception ex) {
+                    ps.setNull(4, java.sql.Types.INTEGER);
+                }
+                ps.setString(5, txtAddress.getText().trim());
+                ps.setString(6, roleBox.getSelectedItem().toString());
+                ps.setInt(7, chkApproved.isSelected() ? 1 : 0);
+                ps.setInt(8, id);
+                ps.executeUpdate();
+                
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Details Updated Successfully!");
+                
+                // Reload appropriate table
+                if (finalCurrentRole.equals("supplier") || roleBox.getSelectedItem().toString().equals("supplier")) {
+                    loadSuppliers();
+                } else {
+                    loadUsers();
+                }
+            } catch (SQLIntegrityConstraintViolationException ex) {
+                JOptionPane.showMessageDialog(dialog, "Username or Email already exists!");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage());
+            }
+        });
+
+        int gridy = 0;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1; dialog.add(txtName, gbc);
+
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Email:"), gbc);
+        gbc.gridx = 1; dialog.add(txtEmail, gbc);
+
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Mobile:"), gbc);
+        gbc.gridx = 1; dialog.add(txtMobile, gbc);
+
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Age:"), gbc);
+        gbc.gridx = 1; dialog.add(txtAge, gbc);
+
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Address:"), gbc);
+        gbc.gridx = 1; dialog.add(new JScrollPane(txtAddress), gbc);
+        
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Role:"), gbc);
+        gbc.gridx = 1; dialog.add(roleBox, gbc);
+        
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; dialog.add(new JLabel("Status:"), gbc);
+        gbc.gridx = 1; dialog.add(chkApproved, gbc);
+
+        gridy++;
+        gbc.gridx = 0; gbc.gridy = gridy; gbc.gridwidth = 2; dialog.add(btnSave, gbc);
+
+        dialog.setVisible(true);
     }
 
     /* ICONS */
