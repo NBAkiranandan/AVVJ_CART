@@ -30,9 +30,12 @@ src/
  ├── icons/                # Application icons
  └── user/
       ├── AdminDashboard.java
+      ├── BillGenerator.java
       ├── DBConnection.java
+      ├── EmailUtility.java
       ├── ForgotPassword.java
       ├── Login.java
+      ├── OTPManager.java
       ├── SignUp.java
       ├── SupplierDashboard.java
       ├── UserDashboard.java
